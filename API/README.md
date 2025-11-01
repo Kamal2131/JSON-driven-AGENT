@@ -1,64 +1,116 @@
-# Health Insurance Enrollment API
+# Health Insurance API - Testing Backend
 
-FastAPI backend for a dynamic form-filling system with interdependent REST APIs.
-Supports both path-based and query-based endpoints for dynamic agent workflows.
+> ⚠️ **FOR TESTING PURPOSES ONLY**  
+> This API provides test endpoints for the Dynamic AI Agent System.
 
-## Setup
+---
 
-1. Install dependencies:
+## 🎯 Purpose
+
+This FastAPI backend provides REST endpoints to test the Dynamic AI Agent System's ability to:
+- Handle dependent API calls
+- Extract dynamic response fields
+- Manage cascading parameters
+- Process complex workflows
+
+---
+
+## 🚀 Quick Start
+
+### 1. Install Dependencies
 ```bash
+cd API
 pip install -r requirements.txt
 ```
 
-2. Run the server:
+### 2. Start Server
 ```bash
-uvicorn main:app --reload
+uvicorn main:app --reload --port 8000
 ```
 
-3. Access API documentation:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+### 3. Access Documentation
+- **Swagger UI**: http://localhost:8000/docs
+- **API Guide**: [API_TESTING_GUIDE.md](API_TESTING_GUIDE.md)
 
-4. Test the APIs:
-```bash
-python test_dynamic_agent.py
+---
+
+## 📁 Project Structure
+
+```
+API/
+├── main.py                    # FastAPI app entry point
+├── routers/                   # API route handlers
+│   ├── states.py             # State endpoints
+│   ├── policies.py           # Policy endpoints
+│   ├── plans.py              # Plan endpoints
+│   ├── risks.py              # Risk type/level endpoints
+│   ├── identifier.py         # Identifier creation (v1)
+│   ├── identifier_v2.py      # Identifier creation (v2)
+│   └── dummy_endpoints.py    # Test endpoints
+├── utils/
+│   └── data.py               # In-memory test data
+├── models/
+│   └── schemas.py            # Pydantic models
+└── requirements.txt          # Dependencies
 ```
 
-## API Flow
+---
 
-### Path-Based Flow (Legacy)
-1. **GET /api/v1/states** - Get available states
-2. **GET /api/v1/states/{state_id}/policies** - Get policies for a state
-3. **GET /api/v1/policies/{policy_id}/plans** - Get plans for a policy
-4. **GET /api/v1/plans/{plan_id}/programs** - Get programs for a plan
-5. **GET /api/v1/programs/{program_id}/risk-types** - Get risk types for a program
-6. **GET /api/v1/risk-types/{risk_type_id}/risk-levels** - Get risk levels for a risk type
-7. **POST /api/v1/enrollment/identifier/create** - Create enrollment identifier
+## 🔗 API Endpoints
 
-### Query-Based Flow (Dynamic Agent Compatible)
-1. **GET /api/v1/states** - Get available states
-2. **GET /api/v1/policies?state={state}** - Get policies by state name/ID
-3. **GET /api/v1/plans?state={state}&policy={policy}** - Get plans by state and policy
-4. **POST /api/v1/identifier/create** - Create identifier with all selections
+### Health Insurance Workflow
+```
+GET  /api/v1/states                              # Get all states
+GET  /api/v1/policies?state={state}              # Get policies by state
+GET  /api/v1/plans?state={state}&policy={policy} # Get plans
+GET  /api/v1/plans/{plan}/programs               # Get programs
+GET  /api/v1/programs/{program}/risk-types       # Get risk types
+GET  /api/v1/risk-types/{risk_type}/risk-levels  # Get risk levels
+POST /api/v1/identifier/create                   # Create identifier
+```
 
-## Example Usage
+### Dummy Test Endpoints
+```
+GET  /api/v1/dummy/countries                     # Get countries
+GET  /api/v1/dummy/cities?country={country}      # Get cities
+GET  /api/v1/dummy/categories                    # Get categories
+GET  /api/v1/dummy/products?category={category}  # Get products
+POST /api/v1/dummy/orders/create                 # Create order
+POST /api/v1/dummy/registrations/create          # Create registration
+```
 
-### Query-Based Workflow (For Dynamic Agent)
+---
+
+## 📊 Test Data
+
+### Health Insurance Data
+- **5 States**: Gujarat, Maharashtra, Karnataka, Tamil Nadu, Delhi
+- **11 Policies**: Individual, Family, Corporate, Senior plans
+- **17 Plans**: Gold, Silver, Platinum, Bronze tiers
+- **15 Programs**: Wellness, Chronic Care, Maternity, Preventive
+- **10 Risk Types**: Low, Medium, High risk categories
+- **15 Risk Levels**: Tier 1, 2, 3 levels
+
+### Dummy Data
+- **Countries**: India, USA, UK, Canada, Australia
+- **Cities**: Mumbai, Delhi, Bangalore, etc.
+- **Categories**: Electronics, Clothing, Books
+- **Products**: Laptops, Phones, Tablets
+
+---
+
+## 🧪 Example Usage
+
+### Get States
 ```bash
-# Step 1: Get states
-curl http://localhost:8000/api/v1/states
+curl http://localhost:8000/api/v1/states?active=true
+```
 
-# Step 2: Get policies by state name
-curl "http://localhost:8000/api/v1/policies?state=Gujarat"
-
-# Step 3: Get plans by state and policy
-curl "http://localhost:8000/api/v1/plans?state=Gujarat&policy=Health%20Policy"
-
-# Step 4: Create identifier
+### Create Identifier
+```bash
 curl -X POST http://localhost:8000/api/v1/identifier/create \
   -H "Content-Type: application/json" \
   -d '{
-    "configuration_name": "enrollment_config_1",
     "state": "Gujarat",
     "policy": "Health Policy",
     "plan": "Gold",
@@ -68,71 +120,130 @@ curl -X POST http://localhost:8000/api/v1/identifier/create \
   }'
 ```
 
-### Path-Based Workflow (Legacy)
+---
+
+## 🔑 Key Features
+
+### 1. Flexible Input
+Accepts both **names** and **IDs**:
+```json
+"state": "Gujarat"     // ✅ Works
+"state": "ST001"       // ✅ Also works
+```
+
+### 2. Dependent Data
+Cascading dependencies:
+```
+State → Policy → Plan → Program → Risk Type → Risk Level
+```
+
+### 3. Dynamic Response Fields
+Responses use different field structures:
+```json
+// States endpoint
+{"data": [...]}
+
+// Policies endpoint
+{"classPlanList": [...]}
+
+// Plans endpoint
+{"classPlanList": [...]}
+```
+
+### 4. CORS Enabled
+All origins allowed for testing.
+
+---
+
+## ⚠️ Important Notes
+
+1. **In-Memory Data**: All data stored in memory. Resets on restart.
+2. **No Database**: No persistence. For testing only.
+3. **No Authentication**: Open access for testing.
+4. **Case Sensitive**: Names are case-sensitive.
+
+---
+
+## 📖 Documentation
+
+- **Full API Guide**: [API_TESTING_GUIDE.md](API_TESTING_GUIDE.md)
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework**: FastAPI 0.104+
+- **Python**: 3.10+
+- **Validation**: Pydantic
+- **CORS**: Enabled for all origins
+
+---
+
+## 📦 Dependencies
+
+```txt
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+```
+
+---
+
+## 🔧 Configuration
+
+No configuration needed. All settings are defaults:
+- **Host**: 0.0.0.0
+- **Port**: 8000
+- **Reload**: Enabled in dev mode
+
+---
+
+## 🐛 Troubleshooting
+
+### Port Already in Use
 ```bash
-# Step 1: Get states
-curl http://localhost:8000/api/v1/states
+# Kill process on port 8000
+# Windows
+netstat -ano | findstr :8000
+taskkill /PID <PID> /F
 
-# Step 2: Get policies for Gujarat (ST001)
-curl http://localhost:8000/api/v1/states/ST001/policies
-
-# Step 3: Get plans for Health Policy (POL001)
-curl http://localhost:8000/api/v1/policies/POL001/plans
-
-# Step 4: Create enrollment identifier
-curl -X POST http://localhost:8000/api/v1/enrollment/identifier/create \
-  -H "Content-Type: application/json" \
-  -d '{
-    "state_id": "ST001",
-    "policy_id": "POL001",
-    "plan_id": "PLN001",
-    "program_id": "PRG001",
-    "risk_type_id": "RT002",
-    "risk_level_id": "RL002",
-    "applicant_details": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "date_of_birth": "1990-01-15",
-      "email": "john.doe@example.com",
-      "phone": "+919876543210"
-    }
-  }'
+# Linux/Mac
+lsof -ti:8000 | xargs kill -9
 ```
 
-## Project Structure
-
-```
-.
-├── main.py                          # FastAPI app entry point
-├── requirements.txt                 # Python dependencies
-├── test_dynamic_agent.py           # Test script for dynamic agent APIs
-├── API_DOCUMENTATION.md            # Detailed API documentation
-├── models/
-│   ├── __init__.py
-│   └── schemas.py                  # Pydantic models
-├── routers/
-│   ├── __init__.py
-│   ├── states.py                   # States endpoint
-│   ├── policies.py                 # Policies endpoints (path & query)
-│   ├── plans.py                    # Plans & programs endpoints (path & query)
-│   ├── risks.py                    # Risk types & levels endpoints
-│   ├── identifier.py               # Enrollment identifier endpoint (v1)
-│   └── identifier_v2.py            # Identifier endpoint (v2 - dynamic agent)
-├── utils/
-│   ├── __init__.py
-│   └── data.py                     # In-memory data store
-└── example_configs/
-    ├── create_identifier_config.json   # Example JSON config
-    └── full_workflow_config.json       # Full workflow config
+### Module Not Found
+```bash
+pip install -r requirements.txt
 ```
 
-## Dynamic Agent Configuration
+### CORS Issues
+CORS is already enabled for all origins. No action needed.
 
-See `example_configs/` directory for JSON configuration examples that can be used by the dynamic agent system.
+---
 
-### Key Features for Dynamic Agent:
-- Query parameter support for flexible API calls
-- Response fields follow `classPlanList[].FieldName` notation
-- Accepts both IDs and names for all parameters
-- Dependency validation across all steps
-- Structured response format for easy parsing
+## 🎯 Testing with Agent
+
+This API is designed to work with the Dynamic AI Agent System:
+
+1. Start this API server
+2. Start the Agent system (see `AGENT/README.md`)
+3. Agent will automatically call these endpoints
+4. Test various workflows
+
+---
+
+## 📞 Support
+
+For issues:
+1. Check [API_TESTING_GUIDE.md](API_TESTING_GUIDE.md)
+2. Review Swagger UI at http://localhost:8000/docs
+3. Check terminal logs
+
+---
+
+**Version**: 2.0.0  
+**Purpose**: Testing Dynamic AI Agent System  
+**Status**: Development/Testing Only
