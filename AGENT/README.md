@@ -8,52 +8,62 @@ A fully dynamic, configuration-driven AI agent system built with LangGraph and O
 - **SOLID Principles**: Decoupled services, easy to extend and maintain
 - **Multi-LLM Support**: Switch between OpenAI and Azure OpenAI by changing one config
 - **Automatic Parameter Collection**: Intelligently collects parameters based on dependencies
-- **Supervisor Agent**: Routes user requests to appropriate workflows
-- **LangGraph State Machine**: Robust workflow execution with state management
+- **Supervisor Agent**: Routes user requests to appropriate workflows using LangGraph
+- **LangGraph State Machines**: Robust workflow execution with retry logic and error handling
+- **LangSmith Tracing**: Full observability of all operations
 
 ## 🏗️ Architecture
 
 ```
 AGENT/
-├── services/           # Service layer (SOLID: Single Responsibility)
-│   ├── llm_service.py     # LLM abstraction (OpenAI/Azure)
-│   └── api_service.py     # HTTP API client
-├── agents/            # Agent layer
-│   ├── supervisor_agent.py         # Routes requests
+├── services/                      # Service layer (SOLID)
+│   ├── llm_service.py            # LLM abstraction (OpenAI/Azure)
+│   ├── api_service.py            # HTTP API client
+│   └── tracing_service.py        # LangSmith tracing
+├── agents/                        # Agent layer
+│   ├── langgraph_supervisor.py   # Routes requests (LangGraph)
 │   ├── parameter_collector_agent.py # Collects parameters
-│   └── api_executor_agent.py       # Executes APIs
-├── workflows/         # Workflow orchestration
-│   └── workflow_executor.py        # LangGraph state machine
-├── utils/            # Utilities
-│   ├── json_path_extractor.py     # Extract from JSON responses
-│   └── config_loader.py           # Load workflow configs
+│   └── api_executor_agent.py     # Executes APIs
+├── workflows/                     # Workflow orchestration
+│   └── langgraph_executor.py     # LangGraph state machine
+├── utils/                         # Utilities
+│   ├── json_path_extractor.py    # Extract from JSON responses
+│   └── config_loader.py          # Load workflow configs
 ├── config/
-│   └── workflows/    # JSON workflow configurations
-└── main.py          # Entry point
+│   └── workflows/                # JSON workflow configurations
+└── main_langgraph.py             # Entry point
 ```
 
-## 🚀 Setup
+## 🚀 Quick Start
 
-1. **Install dependencies:**
+### 1. Install Dependencies
 ```bash
+cd AGENT
 pip install -r requirements.txt
 ```
 
-2. **Configure environment:**
+### 2. Configure Environment
 ```bash
 cp .env.example .env
-# Edit .env and add your OpenAI API key
 ```
 
-3. **Start the API server (in another terminal):**
+Edit `.env` and add your keys:
 ```bash
-cd ../API
-uvicorn main:app --reload
+OPENAI_API_KEY=your_openai_key
+LANGSMITH_API_KEY=your_langsmith_key  # Optional
+LANGSMITH_TRACING=true                # Optional
 ```
 
-4. **Run the agent:**
+### 3. Start API Server (Terminal 1)
 ```bash
-python main.py
+cd API
+uvicorn main:app --reload --port 8000
+```
+
+### 4. Run Agent (Terminal 2)
+```bash
+cd AGENT
+python main_langgraph.py
 ```
 
 ## 📝 Creating Workflow Configurations
@@ -62,23 +72,35 @@ Add JSON files to `config/workflows/` directory:
 
 ```json
 {
-  "api_name": "Create Identifier",
+  "api_name": "Create Identifier Enhanced",
   "endpoint": "/identifier/create",
   "method": "POST",
-  "description": "Create an enrollment identifier",
+  "description": "Create health insurance identifier with dependent dropdowns",
   "parameters": {
     "state": {
-      "type": "string",
+      "type": "select",
+      "label": "Select State",
       "required": true,
-      "location": "body"
+      "location": "body",
+      "api_call": "/states?active=true",
+      "response_field": "data[].state_name",
+      "display_field": "data[].state_name"
     },
     "policy": {
-      "type": "string",
+      "type": "select",
+      "label": "Select Policy",
       "required": true,
       "location": "body",
       "depends_on": "state",
       "api_call": "/policies?state={state}",
-      "response_field": "classPlanList[].policy_name"
+      "response_field": "classPlanList[].policy_name",
+      "display_field": "classPlanList[].policy_name"
+    },
+    "applicant_first_name": {
+      "type": "string",
+      "label": "First Name",
+      "required": true,
+      "location": "body"
     }
   }
 }
@@ -91,54 +113,91 @@ Add JSON files to `config/workflows/` directory:
 - **method**: HTTP method (GET, POST, PUT, PATCH, DELETE)
 - **description**: What the workflow does
 - **parameters**: Object defining all parameters
-  - **type**: Data type (string, integer, boolean, etc.)
+  - **type**: Data type (string, select, integer, boolean)
+  - **label**: User-friendly label for the parameter
   - **required**: Whether parameter is mandatory
   - **location**: Where parameter goes (body, query, path)
-  - **depends_on**: Parameter(s) this depends on
-  - **api_call**: API to fetch options from
+  - **depends_on**: Parameter(s) this depends on (string or array)
+  - **api_call**: API to fetch dropdown options from
   - **response_field**: JSON path to extract values
+  - **display_field**: JSON path for display labels
+  - **default**: Default value if not provided
 
-### Response Field Notation
+### JSON Path Notation
 
-- `data[]` - Array in data field
-- `data[].field_name` - Extract field_name from array
-- `classPlanList[].PolicyId` - Extract PolicyId from classPlanList
+- `data[].state_name` - Extract state_name from array in data
+- `classPlanList[].policy_name` - Extract policy_name from classPlanList array
 - `data.enrollment_id` - Direct field access
+- `response.nested.field` - Deep nested field access
+
+### Parameter Dependencies
+
+```json
+"depends_on": "state"              // Single dependency
+"depends_on": ["state", "policy"]  // Multiple dependencies
+```
+
+Parameters wait for dependencies to be collected before fetching options.
 
 ## 💡 Usage Examples
 
 ### Example 1: Create Identifier
 ```
-You: I want to create an identifier for Gujarat with Health Policy and Gold plan
+You: Create identifier
+
+# Agent will:
+# 1. Show state dropdown (Gujarat, Maharashtra, etc.)
+# 2. Show policy dropdown based on selected state
+# 3. Show plan dropdown based on selected policy
+# 4. Show program dropdown based on selected plan
+# 5. Ask for applicant details
+# 6. Create identifier via API
+# 7. Show formatted response
 ```
 
 ### Example 2: View States
 ```
-You: Show me all available states
+You: Show me all states
+
+# Agent calls GET /states and displays results
 ```
 
-### Example 3: Get Policies
+### Example 3: Create Order
 ```
-You: What policies are available in Maharashtra?
+You: Create an order
+
+# Agent will guide through:
+# Country → City → Category → Product → Customer details
 ```
 
-## 🔧 Switching LLM Providers
+## 🔧 Configuration Options
 
-### Use OpenAI (default)
+### LLM Provider
+
+**OpenAI (default):**
 ```bash
-# .env
 LLM_TYPE=openai
 OPENAI_API_KEY=your_key
 ```
 
-### Use Azure OpenAI
+**Azure OpenAI:**
 ```bash
-# .env
 LLM_TYPE=azure
 AZURE_OPENAI_API_KEY=your_key
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
 AZURE_OPENAI_DEPLOYMENT=your-deployment
 ```
+
+### LangSmith Tracing (Optional)
+
+```bash
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=your_langsmith_key
+LANGSMITH_PROJECT=your_project_name
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+```
+
+View traces at: https://smith.langchain.com
 
 ## 🎨 SOLID Principles Applied
 
@@ -163,48 +222,139 @@ AZURE_OPENAI_DEPLOYMENT=your-deployment
 ## 🧪 Testing
 
 ```bash
-# Test with sample workflow
-python main.py
+# Run the agent
+python main_langgraph.py
 
-# In the interactive prompt:
-You: I want to create an identifier
+# Try these commands:
+You: Create identifier
+You: Show me all states
+You: Create an order
+You: exit
 ```
 
 ## 📦 Adding New Workflows
 
-1. Create JSON config in `config/workflows/`
+1. Create JSON file in `config/workflows/`
 2. Restart the agent
-3. The supervisor will automatically detect and route to it
+3. System automatically loads and routes to it
 
-No code changes needed! 🎉
+**No code changes needed!** 🎉
+
+### Available Workflows
+
+- `create_identifier_enhanced.json` - Health insurance identifier
+- `create_full_enrollment.json` - Complete enrollment
+- `create_order.json` - Product order
+- `create_registration.json` - User registration
+- `get_states.json` - View states
+- `view_countries.json` - View countries
+- `view_cities.json` - View cities
 
 ## 🔍 How It Works
 
-1. **User Input** → Supervisor Agent
-2. **Supervisor** → Selects appropriate workflow config
-3. **Parameter Collector** → Gathers required parameters
-   - Fetches dependent options from APIs
-   - Uses LLM to select from options
-4. **API Executor** → Calls the final API
-5. **Supervisor** → Generates human-readable response
+### Flow Diagram
+```
+User Input
+    ↓
+[Supervisor LangGraph]
+  ├─ Analyze Intent
+  ├─ Match Workflow
+  └─ Validate Match
+    ↓
+[Workflow Executor LangGraph]
+  ├─ Collect Parameters (with retry)
+  │   ├─ Fetch options from APIs
+  │   ├─ Show dropdowns
+  │   └─ Resolve dependencies
+  ├─ Execute API
+  └─ Handle Errors
+    ↓
+[Supervisor]
+  └─ Generate Structured Response
+    ↓
+User sees formatted output
+```
+
+### Key Components
+
+1. **Supervisor Agent** (LangGraph)
+   - Analyzes user intent
+   - Matches to workflow config
+   - Generates responses
+
+2. **Parameter Collector**
+   - Reads JSON config
+   - Resolves dependencies
+   - Fetches dropdown options from APIs
+   - Collects user input
+
+3. **API Executor**
+   - Builds request from collected params
+   - Executes HTTP calls
+   - Returns response
+
+4. **Workflow Executor** (LangGraph)
+   - State machine orchestration
+   - Retry logic
+   - Error handling
 
 ## 🛠️ Extending the System
 
 ### Add New LLM Provider
 ```python
-class CustomLLMService(LLMService):
+# In services/llm_service.py
+class ClaudeLLMService(LLMService):
     def generate(self, prompt: str, **kwargs) -> str:
-        # Your implementation
+        # Your Claude implementation
         pass
+
+# In LLMServiceFactory
+elif service_type == "claude":
+    return ClaudeLLMService(**kwargs)
 ```
 
 ### Add New API Client
 ```python
+# In services/api_service.py
 class GraphQLAPIService(APIService):
     def call(self, method: str, url: str, **kwargs):
         # Your GraphQL implementation
         pass
 ```
+
+### Add Custom Agent
+```python
+# In agents/
+class CustomAgent:
+    def __init__(self, llm_service: LLMService):
+        self.llm_service = llm_service
+    
+    def process(self, state: Dict) -> Dict:
+        # Your logic
+        return state
+```
+
+## 📚 Documentation
+
+- **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
+- **LangSmith Guide**: [LANGSMITH_GUIDE.md](LANGSMITH_GUIDE.md)
+- **Setup Guide**: [SETUP_GUIDE.md](SETUP_GUIDE.md)
+- **Workflow Config**: [config/workflows/README.md](config/workflows/README.md)
+
+## 🐛 Troubleshooting
+
+### Agent can't find workflow
+- Check JSON file is in `config/workflows/`
+- Verify JSON syntax is valid
+- Restart the agent
+
+### API connection failed
+- Ensure API server is running on port 8000
+- Check `API_BASE_URL` in `.env`
+
+### LLM errors
+- Verify `OPENAI_API_KEY` is set correctly
+- Check API key has sufficient credits
 
 ## 📄 License
 
