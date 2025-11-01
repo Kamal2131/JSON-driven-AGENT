@@ -1,0 +1,50 @@
+{
+  "workflow_name": "Complete Enrollment Workflow",
+  "base_url": "http://localhost:8000/api/v1",
+  "steps": [
+    {
+      "step_name": "get_states",
+      "endpoint": "/states",
+      "method": "GET",
+      "description": "Fetch available states",
+      "response_field": "data[].state_name",
+      "value_field": "data[].state_id"
+    },
+    {
+      "step_name": "get_policies",
+      "endpoint": "/policies",
+      "method": "GET",
+      "description": "Fetch policies for selected state",
+      "depends_on": {
+        "state": "get_states.state_id"
+      },
+      "response_field": "classPlanList[].policy_name",
+      "value_field": "classPlanList[].PolicyId"
+    },
+    {
+      "step_name": "get_plans",
+      "endpoint": "/plans",
+      "method": "GET",
+      "description": "Fetch plans for selected policy",
+      "depends_on": {
+        "state": "get_states.state_id",
+        "policy": "get_policies.PolicyId"
+      },
+      "response_field": "classPlanList[].PlanDescription",
+      "value_field": "classPlanList[].plan_id"
+    },
+    {
+      "step_name": "create_identifier",
+      "endpoint": "/identifier/create",
+      "method": "POST",
+      "description": "Create enrollment identifier",
+      "body_params": {
+        "configuration_name": "user_input",
+        "state": "get_states.state_name",
+        "policy": "get_policies.policy_name",
+        "plan": "get_plans.plan_name"
+      },
+      "response_field": "data.enrollment_id"
+    }
+  ]
+}

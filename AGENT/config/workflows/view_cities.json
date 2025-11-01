@@ -1,0 +1,15 @@
+{
+  "api_name": "View Cities",
+  "endpoint": "/dummy/cities",
+  "method": "GET",
+  "description": "View cities for a specific country",
+  "parameters": {
+    "country": {
+      "type": "string",
+      "required": true,
+      "location": "query",
+      "api_call": "/dummy/countries",
+      "response_field": "data[].name"
+    }
+  }
+}

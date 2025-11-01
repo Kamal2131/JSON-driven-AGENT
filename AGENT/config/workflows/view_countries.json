@@ -1,0 +1,7 @@
+{
+  "api_name": "View Countries",
+  "endpoint": "/dummy/countries",
+  "method": "GET",
+  "description": "View all available countries",
+  "parameters": {}
+}

@@ -1,0 +1,45 @@
+{
+  "api_name": "Create Registration",
+  "endpoint": "/dummy/registrations/create",
+  "method": "POST",
+  "description": "Create a new registration with country and city selection",
+  "parameters": {
+    "country": {
+      "type": "string",
+      "required": true,
+      "location": "body",
+      "api_call": "/dummy/countries",
+      "response_field": "data[].name"
+    },
+    "city": {
+      "type": "string",
+      "required": true,
+      "location": "body",
+      "depends_on": "country",
+      "api_call": "/dummy/cities?country={country}",
+      "response_field": "data[].name"
+    },
+    "full_name": {
+      "type": "string",
+      "required": true,
+      "location": "body"
+    },
+    "email": {
+      "type": "string",
+      "required": true,
+      "location": "body"
+    },
+    "phone": {
+      "type": "string",
+      "required": true,
+      "location": "body"
+    },
+    "category": {
+      "type": "string",
+      "required": true,
+      "location": "body",
+      "api_call": "/dummy/categories",
+      "response_field": "data[].id"
+    }
+  }
+}

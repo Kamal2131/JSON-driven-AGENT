@@ -1,0 +1,62 @@
+{
+  "api_name": "Create Order",
+  "endpoint": "/dummy/orders/create",
+  "method": "POST",
+  "description": "Create a new product order with country, city, category, product and brand selection",
+  "parameters": {
+    "country": {
+      "type": "string",
+      "required": true,
+      "location": "body",
+      "api_call": "/dummy/countries",
+      "response_field": "data[].name"
+    },
+    "city": {
+      "type": "string",
+      "required": true,
+      "location": "body",
+      "depends_on": "country",
+      "api_call": "/dummy/cities?country={country}",
+      "response_field": "data[].name"
+    },
+    "category": {
+      "type": "string",
+      "required": true,
+      "location": "body",
+      "api_call": "/dummy/categories",
+      "response_field": "data[].id"
+    },
+    "product": {
+      "type": "string",
+      "required": true,
+      "location": "body",
+      "depends_on": "category",
+      "api_call": "/dummy/products?category={category}",
+      "response_field": "data[].id"
+    },
+    "brand": {
+      "type": "string",
+      "required": false,
+      "location": "body",
+      "depends_on": "product",
+      "api_call": "/dummy/brands?product={product}",
+      "response_field": "data[].id"
+    },
+    "quantity": {
+      "type": "integer",
+      "required": false,
+      "location": "body",
+      "default": 1
+    },
+    "customer_name": {
+      "type": "string",
+      "required": true,
+      "location": "body"
+    },
+    "customer_email": {
+      "type": "string",
+      "required": true,
+      "location": "body"
+    }
+  }
+}

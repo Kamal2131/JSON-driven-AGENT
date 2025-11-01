@@ -1,0 +1,55 @@
+{
+  "api_name": "Create Full Enrollment",
+  "endpoint": "/identifier/create",
+  "method": "POST",
+  "description": "Create complete enrollment identifier with state, policy, and plan",
+  "parameters": {
+    "configuration_name": {
+      "type": "string",
+      "required": false,
+      "location": "body",
+      "default": "full_enrollment_config"
+    },
+    "state": {
+      "type": "string",
+      "required": true,
+      "location": "body",
+      "api_call": "/states",
+      "response_field": "data[].state_name"
+    },
+    "policy": {
+      "type": "string",
+      "required": true,
+      "location": "body",
+      "depends_on": "state",
+      "api_call": "/policies?state={state}",
+      "response_field": "classPlanList[].policy_name"
+    },
+    "plan": {
+      "type": "string",
+      "required": true,
+      "location": "body",
+      "depends_on": ["state", "policy"],
+      "api_call": "/plans?state={state}&policy={policy}",
+      "response_field": "classPlanList[].plan_name"
+    },
+    "applicant_first_name": {
+      "type": "string",
+      "required": false,
+      "location": "body",
+      "default": null
+    },
+    "applicant_last_name": {
+      "type": "string",
+      "required": false,
+      "location": "body",
+      "default": null
+    },
+    "applicant_email": {
+      "type": "string",
+      "required": false,
+      "location": "body",
+      "default": null
+    }
+  }
+}

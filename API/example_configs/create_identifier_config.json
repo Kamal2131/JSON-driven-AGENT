@@ -1,0 +1,30 @@
+{
+  "api_name": "Create Identifier",
+  "endpoint": "/identifier/create",
+  "method": "POST",
+  "description": "API configuration for creating an identifier",
+  "parameters": {
+    "configuration_name": {
+      "type": "string",
+      "required": true
+    },
+    "state": {
+      "type": "string",
+      "required": true
+    },
+    "policy": {
+      "type": "string",
+      "required": true,
+      "depends_on": "state",
+      "api_call": "/policies?state={state}",
+      "response_field": "classPlanList[].PolicyId"
+    },
+    "plan": {
+      "type": "string",
+      "required": true,
+      "depends_on": ["state", "policy"],
+      "api_call": "/plans?state={state}&policy={policy}",
+      "response_field": "classPlanList[].PlanDescription"
+    }
+  }
+}

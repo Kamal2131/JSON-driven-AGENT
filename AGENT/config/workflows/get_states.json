@@ -1,0 +1,14 @@
+{
+  "api_name": "Get States",
+  "endpoint": "/states",
+  "method": "GET",
+  "description": "View available states for health insurance enrollment",
+  "parameters": {
+    "active": {
+      "type": "boolean",
+      "required": false,
+      "location": "query",
+      "default": true
+    }
+  }
+}

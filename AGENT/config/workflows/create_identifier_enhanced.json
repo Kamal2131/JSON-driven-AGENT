@@ -1,0 +1,95 @@
+{
+  "api_name": "Create Identifier Enhanced",
+  "endpoint": "/identifier/create",
+  "method": "POST",
+  "description": "Dynamic form configuration for creating a health insurance identifier using dependent dropdowns and applicant data",
+  "parameters": {
+    "configuration_name": {
+      "type": "string",
+      "label": "Configuration Name",
+      "required": false,
+      "location": "body",
+      "default": "Health_Identifier_Config"
+    },
+    "state": {
+      "type": "select",
+      "label": "Select State",
+      "required": true,
+      "location": "body",
+      "api_call": "/states?active=true",
+      "response_field": "data[].state_name",
+      "display_field": "data[].state_name"
+    },
+    "policy": {
+      "type": "select",
+      "label": "Select Policy",
+      "required": true,
+      "location": "body",
+      "depends_on": "state",
+      "api_call": "/policies?state={state}",
+      "response_field": "classPlanList[].policy_name",
+      "display_field": "classPlanList[].policy_name"
+    },
+    "plan": {
+      "type": "select",
+      "label": "Select Plan",
+      "required": true,
+      "location": "body",
+      "depends_on": ["state", "policy"],
+      "api_call": "/plans?state={state}&policy={policy}",
+      "response_field": "classPlanList[].plan_name",
+      "display_field": "classPlanList[].plan_name"
+    },
+    "program": {
+      "type": "select",
+      "label": "Select Program",
+      "required": false,
+      "location": "body",
+      "depends_on": "plan",
+      "api_call": "/plans/{plan}/programs",
+      "response_field": "data[].program_name",
+      "display_field": "data[].program_name",
+      "default": null
+    },
+    "risk_type": {
+      "type": "select",
+      "label": "Select Risk Type",
+      "required": false,
+      "location": "body",
+      "depends_on": "program",
+      "api_call": "/programs/{program}/risk-types",
+      "response_field": "data[].risk_type_name",
+      "display_field": "data[].risk_type_name",
+      "default": null
+    },
+    "risk_level": {
+      "type": "select",
+      "label": "Select Risk Level",
+      "required": false,
+      "location": "body",
+      "depends_on": "risk_type",
+      "api_call": "/risk-types/{risk_type}/risk-levels",
+      "response_field": "data[].risk_level_name",
+      "display_field": "data[].risk_level_name",
+      "default": null
+    },
+    "applicant_first_name": {
+      "type": "string",
+      "label": "First Name",
+      "required": true,
+      "location": "body"
+    },
+    "applicant_last_name": {
+      "type": "string",
+      "label": "Last Name",
+      "required": true,
+      "location": "body"
+    },
+    "applicant_email": {
+      "type": "string",
+      "label": "Email Address",
+      "required": true,
+      "location": "body"
+    }
+  }
+}
